@@ -1,0 +1,95 @@
+//-------------------------------------------------------------------
+//-----------------------Load Files and Parameters-------------------
+//-------------------------------------------------------------------
+
+// Load files
+load_file("nrngui.hoc")
+load_file("Rod.tem")
+load_file("cone.tem")
+
+// Simulation Parameters
+Time_Step = 0.01
+Simul_Time = 4000
+Sample_Time = 0.01
+num_rod = 25
+// PR[10] is max hyperpolarisation
+
+BipCellZ = 39.5
+GanCellZ = 10
+
+// Cell Object Reference
+objref Rod_PR[num_rod], ON_Bip, OFF_Bip, ON_Gan, OFF_Gan
+
+// Photocurrent Waveform Injection Object References
+objref darkinput_rod, brightinput_rod[10][num_rod]
+
+// Object References for recording and saving responses
+objref rect, savt
+objref recRod[num_rod], savRod[num_rod]
+
+proc Create_Cells() {
+	// Generate PR layer
+	for(i = 0; i < num_rod; i = i + 1) {
+		Rod_PR[i] = new Rod(-500-(i*20), -500-(i*20), 0)
+	}
+
+}
+
+proc Create_Syn() {
+
+}
+
+proc Create_Input() {
+	Rod_PR.soma darkinput_rod = new IinjLTDim(0.5)
+	darkinput_rod.amp = 0
+	darkinput_rod.ssI = 0
+	darkinput_rod.del = 0
+	darkinput_rod.ton = Simul_Time
+
+	for(j = 0; j < num_rod; j = j + 1) {
+		for(i = 0; i < 10; i = i + 1) {
+			Rod_PR[j].soma[i] brightinput_rod[i][j] = new IinjLT(0.5)
+			brightinput_rod[i][j].amp = 0
+			brightinput_rod[i][j].ssI = 32
+			brightinput_rod[i][j].del = 0
+			brightinput_rod[i][j].ton = 0
+			brightinput_rod[i][j].num = 1
+		}
+	}
+}
+
+proc Init_Stim() {
+	{load_file("global.hoc")}
+	{load_file("gui.hoc")}
+	FIELD_LEFT   = -100
+    FIELD_BOTTOM = -100
+    FIELD_WIDTH  = 300
+    FIELD_HEIGHT = 300
+	{load_file("instr.hoc")}
+}
+
+proc record_Response() {
+	rect = new Vector()
+	rect.record(&t, Sample_Time)
+	savt = new File()
+	savt.wopen("Cell responses/t.csv")
+
+	for(i = 0; i < num_rod; i = i + 1) {
+		strdef generate_sav_file
+		recRod[i] = new Vector()
+		recRod[i].record(&Rod_PR[i].soma[34].v(0.5), Sample_Time)
+		savRod[i] = new File()
+		sprint(generate_sav_file, "Cell responses/Rod_%d.csv", i)
+		savRod[i].wopen(generate_sav_file)
+	}
+}
+
+proc save_Response() {
+	rect.printf(savt)
+	savt.close()
+
+	for(i = 0; i < num_rod; i = i + 1) {
+		recRod[i].printf(savRod[i])
+		savRod[i].close()
+	}
+}

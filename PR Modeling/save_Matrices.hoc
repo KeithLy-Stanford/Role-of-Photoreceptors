@@ -1,0 +1,184 @@
+// File for saving matrices
+
+objref PR_upper_param, PR_lower_param
+objref HZ_upper_param, HZ_lower_param
+objref BIP_upper_param, BIP_lower_param
+objref AII_upper_param, AII_lower_param
+objref RGC_param
+
+objref sav_PR_upper_param, sav_PR_lower_param
+objref sav_HZ_upper_param, sav_HZ_lower_param
+objref sav_BIP_upper_param, sav_BIP_lower_param
+objref sav_AII_upper_param, sav_AII_lower_param
+objref sav_RGC_param
+
+proc sav_PR_Parameters() {
+
+    // 1 = cell type 
+    // 2 = x position
+    // 3 = y position
+    PR_upper_param = new Matrix(PR_total_upper_cells, 3)
+    for i = 0, PR_total_upper_cells - 1 {
+        PR_upper_param.x[i][0] = PR_upper_cell_type.x[i][0]
+        PR_upper_param.x[i][1] = PR_upper_positions.x[i][0]
+        PR_upper_param.x[i][2] = PR_upper_positions.x[i][1]
+    }
+    sav_PR_upper_param = new File()
+    sav_PR_upper_param.wopen("Matrices/PR_upper_parameters.csv")
+    PR_upper_param.fprint(sav_PR_upper_param, "%-16g")
+    sav_PR_upper_param.close()
+
+    PR_lower_param = new Matrix(PR_total_lower_cells, 3)
+    for i = 0, PR_total_lower_cells - 1 {
+        PR_lower_param.x[i][0] = PR_lower_cell_type.x[i][0]
+        PR_lower_param.x[i][1] = PR_lower_positions.x[i][0]
+        PR_lower_param.x[i][2] = PR_lower_positions.x[i][1]
+    }
+    sav_PR_lower_param = new File()
+    sav_PR_lower_param.wopen("Matrices/PR_lower_parameters.csv")
+    PR_lower_param.fprint(sav_PR_lower_param, "%-16g")
+    sav_PR_lower_param.close()
+
+}
+
+proc sav_HZ_parameters() {
+
+    // 1 = number of PRs connected
+    // 2 = x position
+    // 3 = y position
+    HZ_upper_param = new Matrix(HZ_total_upper_cells, 3)
+    for i = 0, HZ_total_upper_cells - 1 {
+        HZ_upper_param.x[i][0] = num_PR_2_HZ_upper.x[i]
+        HZ_upper_param.x[i][1] = HZ_upper_positions.x[i][0]
+        HZ_upper_param.x[i][2] = HZ_upper_positions.x[i][1]
+    }
+    sav_HZ_upper_param = new File()
+    sav_HZ_upper_param.wopen("Matrices/HZ_upper_parameters.csv")
+    HZ_upper_param.fprint(sav_HZ_upper_param, "%-16g")
+    sav_HZ_upper_param.close()
+
+    HZ_lower_param = new Matrix(HZ_total_lower_cells, 3)
+    for i = 0, HZ_total_lower_cells - 1 {
+        HZ_lower_param.x[i][0] = num_PR_2_HZ_lower.x[i]
+        HZ_lower_param.x[i][1] = HZ_lower_positions.x[i][0]
+        HZ_lower_param.x[i][2] = HZ_lower_positions.x[i][1]
+    }
+    sav_HZ_lower_param = new File()
+    sav_HZ_lower_param.wopen("Matrices/HZ_lower_parameters.csv")
+    HZ_lower_param.fprint(sav_HZ_lower_param, "%-16g")
+    sav_HZ_lower_param.close()
+
+}
+
+proc sav_BIP_Parameters() {
+    
+    // 1 = cell type
+    // 2 = dendritic field radius
+    // 3 = number of PRs connected
+    // 4 = x position
+    // 5 = y position
+    BIP_upper_param = new Matrix(BIP_total_upper_cells, 5)
+    for i = 0, BIP_total_upper_cells - 1 {
+        BIP_upper_param.x[i][0] = BIP_upper_cell_type.x[i][0]
+        BIP_upper_param.x[i][1] = BIP_upper_Dendritic_Field_Radius.x[i]
+        BIP_upper_param.x[i][2] = num_PR_2_BIP_upper.x[i]
+        BIP_upper_param.x[i][3] = BIP_upper_positions.x[i][0]
+        BIP_upper_param.x[i][4] = BIP_upper_positions.x[i][1]
+    }
+    sav_BIP_upper_param = new File()
+    sav_BIP_upper_param.wopen("Matrices/BIP_upper_parameters.csv")
+    BIP_upper_param.fprint(sav_BIP_upper_param, "%-16g")
+    sav_BIP_upper_param.close()
+
+    BIP_lower_param = new Matrix(BIP_total_lower_cells, 5)
+    for i = 0, BIP_total_lower_cells - 1 {
+        BIP_lower_param.x[i][0] = BIP_lower_cell_type.x[i][0]
+        BIP_lower_param.x[i][1] = BIP_lower_Dendritic_Field_Radius.x[i]
+        BIP_lower_param.x[i][2] = num_PR_2_BIP_lower.x[i]
+        BIP_lower_param.x[i][3] = BIP_lower_positions.x[i][0]
+        BIP_lower_param.x[i][4] = BIP_lower_positions.x[i][1]
+    }
+    sav_BIP_lower_param = new File()
+    sav_BIP_lower_param.wopen("Matrices/BIP_lower_parameters.csv")
+    BIP_lower_param.fprint(sav_BIP_lower_param, "%-16g")
+    sav_BIP_lower_param.close()
+
+}
+
+proc sav_AII_Parameters() {
+
+    // 1 = number of RBCs connected
+    // 2 = number of ON BCs connected
+    // 3 = number of OFF BCs connected
+    // 4 = number of OFF RGCs connected
+    // 5 = x position
+    // 6 = y position
+    // 7 = dendritic field radius
+    AII_upper_param = new Matrix(AII_total_upper_cells, 7)
+    for i = 0, AII_total_upper_cells - 1 {
+        AII_upper_param.x[i][0] = num_RBC_2_AII_upper.x[i]
+        AII_upper_param.x[i][1] = num_ONBC_2_AII_upper.x[i]
+        AII_upper_param.x[i][2] = num_AII_2_OFFBC_upper.x[i]
+        AII_upper_param.x[i][3] = num_AII_2_OFF_RGC_upper.x[i]
+        AII_upper_param.x[i][4] = AII_upper_positions.x[i][0]
+        AII_upper_param.x[i][5] = AII_upper_positions.x[i][1]
+        AII_upper_param.x[i][6] = AII_upper_Dendritic_Field_Radius.x[i]
+    }
+    sav_AII_upper_param = new File()
+    sav_AII_upper_param.wopen("Matrices/AII_upper_parameters.csv")
+    AII_upper_param.fprint(sav_AII_upper_param, "%-16g")
+    sav_AII_upper_param.close()
+
+    AII_lower_param = new Matrix(AII_total_lower_cells, 7)
+    for i = 0, AII_total_lower_cells - 1 {
+        AII_lower_param.x[i][0] = num_RBC_2_AII_lower.x[i]
+        AII_lower_param.x[i][1] = num_ONBC_2_AII_lower.x[i]
+        AII_lower_param.x[i][2] = num_AII_2_OFFBC_lower.x[i]
+        AII_lower_param.x[i][3] = num_AII_2_OFF_RGC_lower.x[i]
+        AII_lower_param.x[i][4] = AII_lower_positions.x[i][0]
+        AII_lower_param.x[i][5] = AII_lower_positions.x[i][1]
+        AII_lower_param.x[i][6] = AII_lower_Dendritic_Field_Radius.x[i]
+    }
+    sav_AII_lower_param = new File()
+    sav_AII_lower_param.wopen("Matrices/AII_lower_parameters.csv")
+    AII_lower_param.fprint(sav_AII_lower_param, "%-16g")
+    sav_AII_lower_param.close()
+
+}
+
+proc sav_RGC_Parameters() {
+
+    // 1 = type of RGC
+    // 2 = number of BIPs connected
+    // 3 = total number of synapses
+    // 3 = soma x position
+    // 4 = soma y position
+    // 5 = dendrite size
+    // 6 = RGC dendrite tree z start
+    RGC_param = new Matrix(num_gang, 8)
+    for i = 0, num_gang - 1 {
+        RGC_param.x[i][0] = ONOFF_type.x[i][0]
+        RGC_param.x[i][1] = num_BIP_2_RGC.x[i]
+        RGC_param.x[i][2] = num_BIPSyn_2_RGC.x[i]
+        RGC_param.x[i][3] = RGC_position.x[Cell_index.x[i][0]][0]
+        RGC_param.x[i][4] = RGC_position.x[Cell_index.x[i][0]][1]
+        RGC_param.x[i][5] = RGC_dend_radius.x[i][0]
+        RGC_param.x[i][6] = Dend_z.x[i][0]
+        RGC_param.x[i][7] = total_RGC_syn.x[i]
+    }
+    sav_RGC_param = new File()
+    sav_RGC_param.wopen("Matrices/RGC_parameters.csv")
+    RGC_param.fprint(sav_RGC_param, "%-16g")
+    sav_RGC_param.close
+
+}
+
+proc sav_matrix() {
+
+    sav_PR_Parameters()
+    sav_HZ_parameters()
+    sav_BIP_Parameters()
+    sav_AII_Parameters()
+    sav_RGC_Parameters()
+
+}

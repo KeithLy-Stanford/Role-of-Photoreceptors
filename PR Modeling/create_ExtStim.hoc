@@ -1,0 +1,9 @@
+proc Init_Stim() {
+	{load_file("global.hoc")}
+	{load_file("gui.hoc")}
+	FIELD_LEFT   = -100
+    FIELD_BOTTOM = -100
+    FIELD_WIDTH  = 300
+    FIELD_HEIGHT = 300
+	{load_file("instr.hoc")}
+}

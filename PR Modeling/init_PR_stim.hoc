@@ -1,0 +1,40 @@
+load_file("create_Cells.hoc")
+
+proc show_time() {
+	xpanel("timestep")
+	xlabel("Simulation Time")
+	xlabel("")
+	xvalue("Real Time", "realtime")
+	xlabel("")
+	xvalue("Current Time Step", "t")
+	xpanel(0,0,0)
+}
+
+proc init() {
+    finitialize()
+    fcurrent()
+    dt = Time_Step
+}
+
+proc start() {
+
+    init()
+
+    // Create the connections between cells
+    Create_Cells()
+
+    Init_Stim()
+    //save_matrices()
+    Create_Input()
+    //create_Clamps()
+
+    tstop = Simul_Time
+    show_time()
+
+}
+
+start()
+//load_file("session2.ses")
+record_Response()
+run()
+save_Response()

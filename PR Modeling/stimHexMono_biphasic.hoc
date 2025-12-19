@@ -1,0 +1,352 @@
+// Modified from hex electrode stimHex.hoc
+//
+// Implements hexagonal stimulation electrodes, where the centre electrode delivers 
+// the stimuli while the six surrounding electrodes sink the return current with 
+// one-sixth the load each.
+//
+// Also contains a monopolar electrode. It is assumed that either (1) the hex 
+// array and the monopolar electrode are far apart - thereby have minimal influence
+// on each other - and/or (2) the hex array and monopolar electrode are driven by
+// two independent / isolated stimulator with zero conductance between them (i.e.
+// two electrically isolated systems).
+//
+// Refer to stim.hoc for details on the extracellular mechanism, principle of 
+// reciprocity, and principle of superposition. 
+
+//---------------------------PARAMETERS TO CHANGE--------------------------------//
+
+// Electrode Size
+hexElecRad = 20                         // electrode radius (um) RADIUS NOT DIAMETER
+
+// Electrode Position
+// For reference, BIPs are at +98mm z-axis
+ImplantX       = 0                      // default centre X (um)
+ImplantY       = 0                          // default center Y (um)
+ImplantZ       = 0                        // default center Z (um)
+
+//Stimulus Waveform
+stim_freq = 2                         // Stim frequency (Hz)
+hexDel        = 100                    // Stim delay (ms)
+hexDur        = 10 //1000/(2*stim_freq)      // Stim duration (ms)
+hexAmp        = 1                 // Stim amplitude (mA)
+
+//-------------------------------------------------------------------------------//
+
+
+Rstdelec =0.725*15 //0.725*3/11.6 // 0.725: transfer resist. factor for 10um radius disk in Ames
+
+// hex electrode
+hexDisp    = 2000 //2.39 //*4   // electrode centre-surround pitch (um)
+
+//{load_file("For_loop_X.hoc")}
+//{load_file("For_loop_Y.hoc")}
+
+
+// monopolar electrode
+monElecRad = 1 //40   // electrode radius (um)
+monX       = 0 //100  //+20 //60   // default centre X (um)
+monY       = 0   // default center Y (um)
+monZ       = -126 //-120 -8.2  //-40  // default center Z (um)
+
+// hex rectangular pulse train
+//{load_file("For_loop_Stim.hoc")}
+
+hexInterphase = 0  ///0.16        // ms
+hexInterpulse = 1000/stim_freq - hexDur //0.14      // ms
+//{load_file("For_loop_X.hoc")}
+
+////////interPhaseDelay = 0.16  // ms
+////////interPulseDelay = 0.14 // ms
+
+hexRepeats    = 2 //int(200/(hexInterpulse+2*hexDur))       // pulse repetitions
+
+// RPSim parameters
+num_slice = 125
+slice_x = 501
+slice_y = 501
+x_spacing = 4       // um
+y_spacing = 4       // um
+z_spacing = 1       // um
+
+objref RPSim_elec_fields[num_slice], slice_file_name
+
+// monopolar rectangular pulse train
+monDel        = 100  //100       // ms
+monDur        = 100      // ms
+monAmp        = -0       // mA
+
+//{load_file("For_loop_Stim.hoc")}
+monInterphase = 0        // ms
+monInterpulse = 0        // ms
+monRepeats    = 5      // pulse repetitions
+
+objref hexStimAmp, hexStimTime
+hexStimAmp = new Vector()
+hexStimTime = new Vector()
+ 
+objref monStimAmp, monStimTime
+monStimAmp = new Vector()
+monStimTime = new Vector()
+
+objref sav_hex_stim_amplitudes, sav_hex_stim_times
+
+
+
+/////////////////////////////////////////////////////////////////////
+
+func arcsin() {
+    // non-iterative approximation of arcsine function
+    a0 = 1.5707288
+    a1 = -0.2121144
+    a2 = 0.0742610
+    a3 = -0.0187293    
+    return PI/2 - sqrt(1 - $1)*(a0 + a1*$1 + a2*$1^2 + a3*$1^3)
+}
+
+proc Read_RPSim() {
+    strdef slice_name
+
+    for i = 0, num_slice - 1{
+        RPSim_elec_fields[i] = new Matrix(slice_x, slice_y)
+        sprint(slice_name, "%s%d.%s", "seq01_Spot1200_2Hz/slice_", i, "txt")
+        slice_file_name = new File(slice_name)
+        slice_file_name.ropen()
+        //print i
+        RPSim_elec_fields[i].scanf(slice_file_name, slice_x-1, slice_y-1)
+    }
+
+}
+
+proc setrx() {
+
+    forall {
+        if (ismembrane("xtra")) {
+            // avoid nodes at 0 and 1 ends: not override values at internal nodes
+            for (x,0) {
+                slice = int((ImplantZ - z_xtra(x))/z_spacing)
+                //print z_xtra(x)
+
+                // ensure that cell falls within electric field
+                if(slice < num_slice && slice > 0) {
+                    // top left corner of RPSim data is (-750+ImplantX, -750+ImplantY), positive to right and down                 
+                    relative_x = int((x_xtra(x) - (-1000 + ImplantX))/x_spacing)
+                    relative_y = int((y_xtra(x) - (-1000 + ImplantY))/y_spacing)
+                    //print relative_x
+                    //print relative_y
+                    RPSim_Ex_xtra(x) = RPSim_elec_fields[slice].x(relative_y, relative_x)
+                    //print RPSim_elec_fields[slice].x(relative_y, relative_x)
+                }
+            }
+        }
+    }
+}
+
+// bogus section to show stim electrode location
+create sHexElec
+create sMonElec
+
+// bogus PointProcess to show stim location
+objref pHexElec
+objref pMonElec
+
+// will be a Shape that shows extracellular electrode location
+objref gElecs
+gElecs = new Shape(0)
+if (GLOBAL_HAS_GUI) {
+    gElecs.view(FIELD_LEFT, FIELD_BOTTOM, FIELD_WIDTH, FIELD_HEIGHT, \
+               230, 450, 200, 200)
+}
+
+proc drawElec() {
+    sHexElec {
+        pt3dclear()
+        pt3dadd(ImplantX-0.5, ImplantY, ImplantZ, 1)
+        pt3dadd(ImplantX+0.5, ImplantY, ImplantZ, 1)
+        pHexElec = new IClamp(0.5)
+    }
+    gElecs.point_mark(pHexElec, 4)  // green
+
+    sMonElec {
+        pt3dclear()
+        pt3dadd(monX-0.5, monY, monZ, 1)
+        pt3dadd(monX+0.5, monY, monZ, 1)
+        pMonElec = new IClamp(0.5)
+    }
+    gElecs.point_mark(pMonElec, 2)  // red
+}
+
+proc setElec() {
+    Read_RPSim()
+    setrx()
+    drawElec()
+}
+
+proc hexStimWaveform() {
+    // Input parameters:
+    //     $1    hexDel  
+    //     $2    hexDur
+    //     $3    hexAmp
+    //     $4    hexInterphase
+    //     $5    hexInterpulse
+    //     $6    hexRepeats
+    
+    // Biphasic pulse: This uses interpolated play, stim vector and time vector 
+    //                    6--------7
+    //                    |        |
+    // 0------1        4--5        8--9
+    //        |        |
+    //        2--------3
+    //                repetitions
+    //        |<--------------------->|
+    
+    // stim vector
+    hexStimAmp.resize(2+8*$6)
+    hexStimAmp.fill(0)
+    for (i = 2; i < 2+8*$6; i = i+8) {
+        hexStimAmp.x[i] = 1
+        hexStimAmp.x[i+1] = 1
+        hexStimAmp.x[i+4] = 0
+        hexStimAmp.x[i+5] = 0
+    }
+    hexStimAmp.mul($3)
+    
+    // time vector
+    hexStimTime.resize(2+8*$6)
+    hexStimTime.x[1] = $1
+    progTime = $1
+    for (i = 2; i < 2+8*$6; i = i+8) {
+        hexStimTime.x[i]   = progTime
+        hexStimTime.x[i+1] = progTime + $2
+        hexStimTime.x[i+2] = progTime + $2
+        hexStimTime.x[i+3] = progTime + $2 + $4
+        hexStimTime.x[i+4] = progTime + $2 + $4
+        hexStimTime.x[i+5] = progTime + $2 + $4 + $2
+        hexStimTime.x[i+6] = progTime + $2 + $4 + $2
+        hexStimTime.x[i+7] = progTime + $2 + $4 + $2 + $5
+        progTime = hexStimTime.x[i+7]
+    }
+}
+
+proc monStimWaveform() {
+    // Input parameters:
+    //     $1    monDel  
+    //     $2    monDur
+    //     $3    monAmp
+    //     $4    monInterphase
+    //     $5    monInterpulse
+    //     $6    monRepeats
+    
+    // Biphasic pulse: This uses interpolated play, stim vector and time vector 
+    //                    6--------7
+    //                    |        |
+    // 0------1        4--5        8--9
+    //        |        |
+    //        2--------3
+    //                repetitions
+    //        |<--------------------->|
+    
+    // stim vector
+    monStimAmp.resize(2+8*$6)
+    monStimAmp.fill(0)
+    for (i = 2; i < 2+8*$6; i = i+8) {
+        monStimAmp.x[i] = 1
+        monStimAmp.x[i+1] = 1
+        monStimAmp.x[i+4] = 0
+        monStimAmp.x[i+5] = 0
+    }
+    monStimAmp.mul($3)
+    
+    // time vector
+    monStimTime.resize(2+8*$6)
+    monStimTime.x[1] = $1
+    progTime = $1
+    for (i = 2; i < 2+8*$6; i = i+8) {
+        monStimTime.x[i]   = progTime
+        monStimTime.x[i+1] = progTime + $2
+        monStimTime.x[i+2] = progTime + $2
+        monStimTime.x[i+3] = progTime + $2 + $4
+        monStimTime.x[i+4] = progTime + $2 + $4
+        monStimTime.x[i+5] = progTime + $2 + $4 + $2
+        monStimTime.x[i+6] = progTime + $2 + $4 + $2
+        monStimTime.x[i+7] = progTime + $2 + $4 + $2 + $5
+        progTime = monStimTime.x[i+7]
+    }
+}
+
+ATTACHED__ = 0
+proc attachStim() {
+    // since is_xtra is GLOBAL, we only need to specify Vector.play()
+    // for one instance of xtra, i.e. at just one internal node
+    // of only one section that contains xtra
+    forall {
+        if (ATTACHED__ == 0) {
+            if (ismembrane("xtra")) {
+                hexStimAmp.play(&trigger_xtra, hexStimTime, 1)   // "interpolated" play
+                //monStimAmp.play(&is2_xtra, monStimTime, 1)  // "interpolated" play
+                ATTACHED__ = 1
+            }
+        }
+    }
+}
+
+proc setStim() {
+    hexStimWaveform(hexDel, hexDur, hexAmp, hexInterphase, hexInterpulse, hexRepeats)
+    // monStimWaveform(monDel, monDur, monAmp, monInterphase, monInterpulse, monRepeats)
+    attachStim()
+}
+
+
+/////////////////////////////////////////////////////////////////////
+
+// initialize default electrode placement
+setElec()
+
+if (GLOBAL_HAS_GUI) {
+    xpanel("Extracellular Electrode", 0)
+        xlabel("Hex array")
+        xvalue("radius (um)", "hexElecRad", 1, "", 0, 1) 
+        xvalue("pitch (um) ", "hexDisp", 1, "", 0, 1) 
+        xvalue("x (um)", "ImplantX", 1, "setElec()", 0, 1)
+        xvalue("y (um)", "ImplantY", 1, "setElec()", 0, 1)
+        xvalue("z (um)", "ImplantZ", 1, "setElec()", 0, 1)
+        xlabel("Monopolar electrode")
+        xvalue("radius (um)", "monElecRad", 1, "", 0, 1) 
+        xvalue("x (um)", "monX", 1, "setElec()", 0, 1)
+        xvalue("y (um)", "monY", 1, "setElec()", 0, 1)
+        xvalue("z (um)", "monZ", 1, "setElec()", 0, 1)
+    xpanel(0,450)
+}
+
+// initialize default stimulus pulse settings
+setStim()
+
+if (GLOBAL_HAS_GUI) {
+    xpanel("Extracellular Stimulus Current", 0)
+        xlabel("Hex array")
+        xvalue("del (ms)", "hexDel", 1, "setStim()", 0, 1)
+        xvalue("dur (ms)", "hexDur", 1, "setStim()", 0, 1)
+        xvalue("amp (mA)", "hexAmp", 1, "setStim()", 0, 1)
+        xvalue("interPhase (ms)", "hexInterphase", 1, "setStim()", 0, 1)
+        xvalue("interPulse (ms)", "hexInterpulse", 1, "setStim()", 0, 1)
+        xvalue("repeats", "hexRepeats", 1, "setStim()", 0, 1)
+        xlabel("Monopolar electrode")
+        xvalue("del (ms)", "monDel", 1, "setStim()", 0, 1)
+        xvalue("dur (ms)", "monDur", 1, "setStim()", 0, 1)
+        xvalue("amp (mA)", "monAmp", 1, "setStim()", 0, 1)
+        xvalue("interPhase (ms)", "monInterphase", 1, "setStim()", 0, 1)
+        xvalue("interPulse (ms)", "monInterpulse", 1, "setStim()", 0, 1)
+        xvalue("repeats", "monRepeats", 1, "setStim()", 0, 1)
+    xpanel(0,780)
+}
+
+proc save_matrices() {
+	sav_hex_stim_amplitudes = new File()
+	sav_hex_stim_amplitudes.wopen("Matrices/stim_Amplitudes.csv")
+	hexStimAmp.printf(sav_hex_stim_amplitudes)
+	sav_hex_stim_amplitudes.close()
+
+    sav_hex_stim_times = new File()
+    sav_hex_stim_times.wopen("Matrices/stim_times.csv")
+    hexStimTime.printf(sav_hex_stim_times)
+	sav_hex_stim_times.close()
+}
